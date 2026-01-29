@@ -1,0 +1,880 @@
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة الباحثين العلمية</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "vue": "https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.esm-browser.js"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <div class="logo">
+                <svg width="50" height="50" viewBox="0 0 50 50">
+                    <circle cx="25" cy="25" r="20" fill="#4285f4" />
+                    <path d="M25 15v20M15 25h20" stroke="white" stroke-width="4" />
+                </svg>
+                <h1>منصة الباحثين العلمية</h1>
+            </div>
+            <nav>
+                <button @click="activeSection = 'dashboard'" :class="{ active: activeSection === 'dashboard' }">الرئيسية</button>
+                <button @click="activeSection = 'references'" :class="{ active: activeSection === 'references' }">إدارة المراجع</button>
+                <button @click="activeSection = 'topics'" :class="{ active: activeSection === 'topics' }">اقتراح موضوعات</button>
+                <button @click="activeSection = 'analysis'" :class="{ active: activeSection === 'analysis' }">التحليل الإحصائي</button>
+                <button @click="activeSection = 'community'" :class="{ active: activeSection === 'community' }">المجتمع العلمي</button>
+                <button @click="activeSection = 'review'" :class="{ active: activeSection === 'review' }">مراجعة الأبحاث</button>
+                <button @click="activeSection = 'library'" :class="{ active: activeSection === 'library' }">المكتبة الرقمية</button>
+            </nav>
+            <div class="user-controls">
+                <button @click="toggleTheme" class="theme-toggle">
+                    <svg width="20" height="20" viewBox="0 0 20 20">
+                        <circle v-if="darkTheme" cx="10" cy="10" r="5" fill="white" />
+                        <path v-else d="M10 15a5 5 0 100-10 5 5 0 000 10z M10 0v2 M10 18v2 M0 10h2 M18 10h2 M2.93 2.93l1.41 1.41 M15.66 15.66l1.41 1.41 M2.93 17.07l1.41-1.41 M15.66 4.34l1.41-1.41" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                </button>
+                <button class="user-profile">
+                    <svg width="24" height="24" viewBox="0 0 24 24">
+                        <circle cx="12" cy="8" r="5" fill="currentColor" />
+                        <path d="M3 21a9 9 0 0118 0z" fill="currentColor" />
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <main>
+            <!-- لوحة التحكم الرئيسية -->
+            <section v-if="activeSection === 'dashboard'" class="dashboard">
+                <h2>لوحة التحكم</h2>
+                <div class="dashboard-grid">
+                    <div class="stats-card">
+                        <h3>إحصائيات البحث</h3>
+                        <div class="chart-container">
+                            <canvas id="researchProgressChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="recent-card">
+                        <h3>أحدث الأنشطة</h3>
+                        <ul class="activity-list">
+                            <li v-for="activity in recentActivities" :key="activity.id">
+                                <div class="activity-icon" :class="activity.type"></div>
+                                <div class="activity-content">
+                                    <p>{{ activity.text }}</p>
+                                    <span class="activity-time">{{ activity.time }}</span>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="tasks-card">
+                        <h3>المهام القادمة</h3>
+                        <ul class="task-list">
+                            <li v-for="task in upcomingTasks" :key="task.id" :class="{ 'high-priority': task.priority === 'high' }">
+                                <input type="checkbox" v-model="task.completed" />
+                                <span>{{ task.title }}</span>
+                                <span class="task-date">{{ task.dueDate }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="recommendations-card">
+                        <h3>مقترحات مخصصة</h3>
+                        <div class="recommendation-items">
+                            <div v-for="rec in recommendations" :key="rec.id" class="recommendation-item">
+                                <h4>{{ rec.title }}</h4>
+                                <p>{{ rec.description }}</p>
+                                <button class="btn-small">عرض التفاصيل</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- قسم إدارة المراجع -->
+            <section v-if="activeSection === 'references'" class="references">
+                <h2>إدارة المراجع العلمية</h2>
+                <div class="section-content">
+                    <div class="tool-panel">
+                        <div class="search-box">
+                            <input type="text" placeholder="البحث عن مراجع..." v-model="referenceSearch" />
+                            <button class="btn-search">بحث</button>
+                        </div>
+                        <div class="actions">
+                            <button class="btn-primary" @click="showAddReferenceModal = true">إضافة مرجع جديد</button>
+                            <button class="btn-secondary">استيراد من Google Scholar</button>
+                            <button class="btn-secondary">تصدير المراجع</button>
+                        </div>
+                        <div class="filters">
+                            <select v-model="referenceFilter">
+                                <option value="all">جميع المراجع</option>
+                                <option value="books">كتب</option>
+                                <option value="articles">مقالات علمية</option>
+                                <option value="journals">دوريات</option>
+                                <option value="theses">أطروحات</option>
+                            </select>
+                            <select v-model="referenceSort">
+                                <option value="date-desc">الأحدث أولاً</option>
+                                <option value="date-asc">الأقدم أولاً</option>
+                                <option value="alpha">أبجدي</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="references-list">
+                        <div v-for="reference in filteredReferences" :key="reference.id" class="reference-card">
+                            <div class="reference-type" :class="reference.type"></div>
+                            <div class="reference-content">
+                                <h3>{{ reference.title }}</h3>
+                                <p class="authors">{{ reference.authors.join(', ') }}</p>
+                                <p class="details">
+                                    <span>{{ reference.publishedIn }}</span>
+                                    <span>{{ reference.year }}</span>
+                                </p>
+                                <div class="tags">
+                                    <span v-for="tag in reference.tags" :key="tag" class="tag">{{ tag }}</span>
+                                </div>
+                            </div>
+                            <div class="reference-actions">
+                                <button class="btn-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16">
+                                        <path d="M12 6v7a1 1 0 01-1 1H5a1 1 0 01-1-1V6M4 6l4-4 4 4M8 2v9" stroke="currentColor" stroke-width="2" fill="none" />
+                                    </svg>
+                                </button>
+                                <button class="btn-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16">
+                                        <path d="M2 4h12M6 4V2h4v2M8 14V7M12 10l-4 4-4-4" stroke="currentColor" stroke-width="2" fill="none" />
+                                    </svg>
+                                </button>
+                                <button class="btn-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16">
+                                        <path d="M12.5 3.5l-7 7L3 8" stroke="currentColor" stroke-width="2" fill="none" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- مودال إضافة مرجع جديد -->
+                <div v-if="showAddReferenceModal" class="modal">
+                    <div class="modal-content">
+                        <h3>إضافة مرجع جديد</h3>
+                        <button class="modal-close" @click="showAddReferenceModal = false">✕</button>
+                        <form @submit.prevent="addNewReference">
+                            <div class="form-group">
+                                <label for="refTitle">عنوان المرجع</label>
+                                <input type="text" id="refTitle" v-model="newReference.title" required />
+                            </div>
+                            <div class="form-group">
+                                <label for="refAuthors">المؤلفون (مفصولين بفواصل)</label>
+                                <input type="text" id="refAuthors" v-model="newReference.authorsInput" required />
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="refType">نوع المرجع</label>
+                                    <select id="refType" v-model="newReference.type" required>
+                                        <option value="book">كتاب</option>
+                                        <option value="article">مقالة علمية</option>
+                                        <option value="journal">دورية</option>
+                                        <option value="thesis">أطروحة</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="refYear">سنة النشر</label>
+                                    <input type="number" id="refYear" v-model="newReference.year" required />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="refPublisher">الناشر / المجلة</label>
+                                <input type="text" id="refPublisher" v-model="newReference.publishedIn" required />
+                            </div>
+                            <div class="form-group">
+                                <label for="refTags">الكلمات المفتاحية (مفصولة بفواصل)</label>
+                                <input type="text" id="refTags" v-model="newReference.tagsInput" />
+                            </div>
+                            <div class="form-group">
+                                <label for="refFile">ملف المرجع (PDF)</label>
+                                <input type="file" id="refFile" accept=".pdf" />
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" @click="showAddReferenceModal = false">إلغاء</button>
+                                <button type="submit" class="btn-primary">إضافة المرجع</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- قسم اقتراح موضوعات بحثية -->
+            <section v-if="activeSection === 'topics'" class="topics">
+                <h2>محرك اقتراح موضوعات بحثية</h2>
+                <div class="section-content">
+                    <div class="interest-selector">
+                        <h3>حدد اهتماماتك البحثية</h3>
+                        <div class="interest-areas">
+                            <div v-for="area in researchAreas" :key="area.id" 
+                                class="interest-area" 
+                                :class="{ selected: selectedInterests.includes(area.id) }"
+                                @click="toggleInterest(area.id)">
+                                <div class="area-icon" v-html="area.icon"></div>
+                                <span>{{ area.name }}</span>
+                            </div>
+                        </div>
+                        <div class="search-controls">
+                            <button class="btn-primary" @click="generateTopics">اقتراح موضوعات</button>
+                            <select v-model="topicType">
+                                <option value="trends">اتجاهات حديثة</option>
+                                <option value="gaps">فجوات بحثية</option>
+                                <option value="interdisciplinary">دراسات بينية</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="topics-result">
+                        <h3>الموضوعات المقترحة</h3>
+                        <div class="topics-list">
+                            <div v-for="topic in suggestedTopics" :key="topic.id" class="topic-card">
+                                <h4>{{ topic.title }}</h4>
+                                <p>{{ topic.description }}</p>
+                                <div class="topic-meta">
+                                    <span class="relevance">ملاءمة: {{ topic.relevance }}%</span>
+                                    <span class="novelty">جدة: {{ topic.novelty }}%</span>
+                                </div>
+                                <div class="topic-tags">
+                                    <span v-for="tag in topic.tags" :key="tag" class="tag">{{ tag }}</span>
+                                </div>
+                                <div class="topic-footer">
+                                    <button class="btn-small">حفظ</button>
+                                    <button class="btn-small">المزيد من المعلومات</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="trend-analysis">
+                        <h3>تحليل الاتجاهات البحثية</h3>
+                        <div class="chart-container">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                        <div class="trend-insights">
+                            <div v-for="insight in trendInsights" :key="insight.id" class="insight-card">
+                                <h4>{{ insight.title }}</h4>
+                                <p>{{ insight.description }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- قسم التحليل الإحصائي -->
+            <section v-if="activeSection === 'analysis'" class="analysis">
+                <h2>أدوات التحليل الإحصائي</h2>
+                <div class="section-content">
+                    <div class="analysis-sidebar">
+                        <h3>أدوات التحليل</h3>
+                        <ul class="analysis-tools">
+                            <li v-for="tool in analysisTools" :key="tool.id" 
+                                :class="{ active: selectedAnalysisTool === tool.id }"
+                                @click="selectedAnalysisTool = tool.id">
+                                <span class="tool-icon" v-html="tool.icon"></span>
+                                <span class="tool-name">{{ tool.name }}</span>
+                            </li>
+                        </ul>
+                        
+                        <h3>البيانات المستوردة</h3>
+                        <ul class="dataset-list">
+                            <li v-for="dataset in datasets" :key="dataset.id" 
+                                :class="{ active: selectedDataset === dataset.id }"
+                                @click="selectedDataset = dataset.id">
+                                {{ dataset.name }}
+                            </li>
+                        </ul>
+                        <button class="btn-secondary">استيراد بيانات جديدة</button>
+                    </div>
+                    
+                    <div class="analysis-main">
+                        <div class="tool-container">
+                            <h3>{{ currentAnalysisTool.name }}</h3>
+                            <p>{{ currentAnalysisTool.description }}</p>
+                            
+                            <div class="tool-options">
+                                <div v-if="selectedAnalysisTool === 'regression'" class="regression-options">
+                                    <div class="form-group">
+                                        <label>المتغير التابع</label>
+                                        <select v-model="regressionOptions.dependent">
+                                            <option v-for="column in currentDataset.columns" :key="column" :value="column">
+                                                {{ column }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>المتغيرات المستقلة</label>
+                                        <div class="checkbox-list">
+                                            <label v-for="column in independentColumns" :key="column">
+                                                <input type="checkbox" v-model="regressionOptions.independent" :value="column" />
+                                                {{ column }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>نوع الانحدار</label>
+                                        <select v-model="regressionOptions.type">
+                                            <option value="linear">خطي (Linear)</option>
+                                            <option value="multiple">متعدد (Multiple)</option>
+                                            <option value="logistic">لوجستي (Logistic)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <!-- خيارات أدوات التحليل الأخرى ستظهر هنا -->
+                            </div>
+                            
+                            <div class="analysis-actions">
+                                <button class="btn-primary" @click="runAnalysis">تشغيل التحليل</button>
+                                <button class="btn-secondary">إعادة تعيين</button>
+                            </div>
+                        </div>
+                        
+                        <div class="analysis-results">
+                            <h3>نتائج التحليل</h3>
+                            <div class="results-container">
+                                <div class="results-charts">
+                                    <canvas id="analysisChart"></canvas>
+                                </div>
+                                <div class="results-summary">
+                                    <h4>ملخص النتائج</h4>
+                                    <table class="stats-table">
+                                        <tbody>
+                                            <tr v-for="(value, key) in analysisResults" :key="key">
+                                                <th>{{ key }}</th>
+                                                <td>{{ value }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="results-interpretation">
+                                    <h4>تفسير النتائج</h4>
+                                    <p>{{ analysisInterpretation }}</p>
+                                </div>
+                            </div>
+                            <div class="export-options">
+                                <button class="btn-secondary">تصدير كـ PDF</button>
+                                <button class="btn-secondary">تصدير كـ Excel</button>
+                                <button class="btn-secondary">حفظ النتائج</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- قسم المجتمع العلمي -->
+            <section v-if="activeSection === 'community'" class="community">
+                <h2>المجتمع العلمي الافتراضي</h2>
+                <div class="section-content">
+                    <div class="community-sidebar">
+                        <div class="user-profile-summary">
+                            <div class="avatar">
+                                <svg width="60" height="60" viewBox="0 0 60 60">
+                                    <circle cx="30" cy="20" r="12" fill="currentColor" />
+                                    <path d="M6 55c0-13.255 10.745-24 24-24s24 10.745 24 24" fill="currentColor" />
+                                </svg>
+                            </div>
+                            <h3>د. أحمد محمد</h3>
+                            <p>باحث في علوم الحاسب - جامعة القاهرة</p>
+                            <div class="profile-stats">
+                                <div class="stat">
+                                    <span class="stat-value">12</span>
+                                    <span class="stat-label">منشورات</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-value">45</span>
+                                    <span class="stat-label">متابعين</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-value">28</span>
+                                    <span class="stat-label">أتابعهم</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="groups-list">
+                            <h3>المجموعات البحثية</h3>
+                            <ul>
+                                <li v-for="group in researchGroups" :key="group.id" 
+                                    :class="{ active: selectedGroup === group.id }"
+                                    @click="selectedGroup = group.id">
+                                    <span class="group-icon" v-html="group.icon"></span>
+                                    <span class="group-name">{{ group.name }}</span>
+                                    <span class="group-members">{{ group.members }}</span>
+                                </li>
+                            </ul>
+                            <button class="btn-secondary">إنشاء مجموعة جديدة</button>
+                        </div>
+                    </div>
+                    
+                    <div class="community-main">
+                        <div class="community-tabs">
+                            <button :class="{ active: communityTab === 'forum' }" @click="communityTab = 'forum'">المنتدى العلمي</button>
+                            <button :class="{ active: communityTab === 'discussions' }" @click="communityTab = 'discussions'">النقاشات النشطة</button>
+                            <button :class="{ active: communityTab === 'researchers' }" @click="communityTab = 'researchers'">الباحثون</button>
+                            <button :class="{ active: communityTab === 'events' }" @click="communityTab = 'events'">المؤتمرات والأحداث</button>
+                        </div>
+                        
+                        <div v-if="communityTab === 'forum'" class="forum-container">
+                            <div class="forum-header">
+                                <div class="search-box">
+                                    <input type="text" placeholder="البحث في المنتدى..." v-model="forumSearch" />
+                                    <button class="btn-search">بحث</button>
+                                </div>
+                                <button class="btn-primary">موضوع جديد</button>
+                            </div>
+                            
+                            <div class="forum-topics">
+                                <div v-for="topic in forumTopics" :key="topic.id" class="forum-topic">
+                                    <div class="topic-info">
+                                        <h4>{{ topic.title }}</h4>
+                                        <p class="topic-meta">
+                                            <span class="author">{{ topic.author }}</span>
+                                            <span class="date">{{ topic.date }}</span>
+                                            <span class="replies">{{ topic.replies }} ردود</span>
+                                            <span class="views">{{ topic.views }} مشاهدات</span>
+                                        </p>
+                                        <div class="topic-tags">
+                                            <span v-for="tag in topic.tags" :key="tag" class="tag">{{ tag }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="topic-activity">
+                                        <div class="last-reply">
+                                            <span>آخر رد: {{ topic.lastReply.author }}</span>
+                                            <span>{{ topic.lastReply.date }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="pagination">
+                                <button>&laquo;</button>
+                                <button class="active">1</button>
+                                <button>2</button>
+                                <button>3</button>
+                                <button>&raquo;</button>
+                            </div>
+                        </div>
+                        
+                        <div v-if="communityTab === 'researchers'" class="researchers-container">
+                            <div class="researchers-header">
+                                <div class="search-box">
+                                    <input type="text" placeholder="البحث عن باحثين..." v-model="researcherSearch" />
+                                    <button class="btn-search">بحث</button>
+                                </div>
+                                <div class="researchers-filters">
+                                    <select v-model="researcherFilter">
+                                        <option value="all">جميع التخصصات</option>
+                                        <option value="cs">علوم الحاسب</option>
+                                        <option value="med">العلوم الطبية</option>
+                                        <option value="eng">الهندسة</option>
+                                        <option value="arts">العلوم الإنسانية</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="researchers-grid">
+                                <div v-for="researcher in filteredResearchers" :key="researcher.id" class="researcher-card">
+                                    <div class="researcher-avatar">
+                                        <svg width="50" height="50" viewBox="0 0 50 50">
+                                            <circle cx="25" cy="15" r="10" fill="currentColor" />
+                                            <path d="M5 45c0-11.046 8.954-20 20-20s20 8.954 20 20" fill="currentColor" />
+                                        </svg>
+                                    </div>
+                                    <div class="researcher-info">
+                                        <h4>{{ researcher.name }}</h4>
+                                        <p class="researcher-title">{{ researcher.title }}</p>
+                                        <p class="researcher-affiliation">{{ researcher.affiliation }}</p>
+                                        <div class="researcher-interests">
+                                            <span v-for="interest in researcher.interests" :key="interest" class="tag">{{ interest }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="researcher-actions">
+                                        <button class="btn-small">الملف الشخصي</button>
+                                        <button class="btn-small">متابعة</button>
+                                        <button class="btn-small">مراسلة</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- قسم مراجعة الأبحاث -->
+            <section v-if="activeSection === 'review'" class="review">
+                <h2>خدمات مراجعة الأبحاث</h2>
+                <div class="section-content">
+                    <div class="review-tools">
+                        <div class="tool-card">
+                            <div class="tool-icon">
+                                <svg width="40" height="40" viewBox="0 0 40 40">
+                                    <path d="M30 5H10a2 2 0 00-2 2v26a2 2 0 002 2h20a2 2 0 002-2V7a2 2 0 00-2-2z" stroke="currentColor" stroke-width="2" fill="none" />
+                                    <path d="M15 15h10M15 20h10M15 25h5" stroke="currentColor" stroke-width="2" />
+                                </svg>
+                            </div>
+                            <h3>التدقيق اللغوي والأكاديمي</h3>
+                            <p>تدقيق النص وتحسين الصياغة اللغوية والأكاديمية للأبحاث.</p>
+                            <button class="btn-primary" @click="activateReviewTool('linguistic')">استخدام الأداة</button>
+                        </div>
+                        <div class="tool-card">
+                            <div class="tool-icon">
+                                <svg width="40" height="40" viewBox="0 0 40 40">
+                                    <path d="M30 13l-15 15-5-5" stroke="currentColor" stroke-width="2" fill="none" />
+                                    <circle cx="20" cy="20" r="15" stroke="currentColor" stroke-width="2" fill="none" />
+                                </svg>
+                            </div>
+                            <h3>كشف الاقتباس</h3>
+                            <p>التحقق من أصالة البحث وكشف الاقتباسات والانتحال العلمي.</p>
+                            <button class="btn-primary" @click="activateReviewTool('plagiarism')">استخدام الأداة</button>
+                        </div>
+                        <div class="tool-card">
+                            <div class="tool-icon">
+                                <svg width="40" height="40" viewBox="0 0 40 40">
+                                    <path d="M15 30l-5-5 5-5M25 10l5 5-5 5M20 30l5-20" stroke="currentColor" stroke-width="2" fill="none" />
+                                </svg>
+                            </div>
+                            <h3>تنسيق المراجع</h3>
+                            <p>تنسيق المراجع وفق المعايير الأكاديمية المختلفة (APA، MLA).</p>
+                            <button class="btn-primary" @click="activateReviewTool('citation')">استخدام الأداة</button>
+                        </div>
+                        <div class="tool-card">
+                            <div class="tool-icon">
+                                <svg width="40" height="40" viewBox="0 0 40 40">
+                                    <path d="M10 20h20M20 10v20" stroke="currentColor" stroke-width="2" />
+                                    <circle cx="20" cy="20" r="15" stroke="currentColor" stroke-width="2" fill="none" />
+                                </svg>
+                            </div>
+                            <h3>تقييم جودة البحث</h3>
+                            <p>تقييم شامل لجودة البحث وتقديم توصيات لتحسينه.</p>
+                            <button class="btn-primary" @click="activateReviewTool('quality')">استخدام الأداة</button>
+                        </div>
+                    </div>
+                    
+                    <div v-if="activeReviewTool" class="review-workspace">
+                        <div class="workspace-header">
+                            <h3>{{ reviewTools[activeReviewTool].name }}</h3>
+                            <button class="btn-close" @click="activeReviewTool = null">✕</button>
+                        </div>
+                        
+                        <div class="workspace-content">
+                            <div class="file-upload">
+                                <label for="documentUpload" class="upload-area">
+                                    <svg width="40" height="40" viewBox="0 0 40 40">
+                                        <path d="M20 30V10M10 20l10-10 10 10" stroke="currentColor" stroke-width="2" fill="none" />
+                                        <path d="M30 30H10" stroke="currentColor" stroke-width="2" />
+                                    </svg>
+                                    <span>اسحب ملف البحث هنا أو اضغط للتحميل</span>
+                                    <input type="file" id="documentUpload" class="hidden" accept=".doc,.docx,.pdf,.txt" />
+                                </label>
+                                <p class="file-info">الملفات المدعومة: PDF, DOCX, DOC, TXT | الحد الأقصى: 10MB</p>
+                                <div v-if="uploadedDocument" class="uploaded-file">
+                                    <span>{{ uploadedDocument.name }}</span>
+                                    <button class="btn-icon" @click="uploadedDocument = null">✕</button>
+                                </div>
+                            </div>
+                            
+                            <div class="tool-options">
+                                <h4>خيارات المراجعة</h4>
+                                <div v-if="activeReviewTool === 'linguistic'" class="linguistic-options">
+                                    <div class="checkbox-option">
+                                        <input type="checkbox" id="grammarCheck" v-model="reviewOptions.grammar" />
+                                        <label for="grammarCheck">التدقيق النحوي</label>
+                                    </div>
+                                    <div class="checkbox-option">
+                                        <input type="checkbox" id="styleCheck" v-model="reviewOptions.style" />
+                                        <label for="styleCheck">تحسين الأسلوب</label>
+                                    </div>
+                                    <div class="checkbox-option">
+                                        <input type="checkbox" id="terminologyCheck" v-model="reviewOptions.terminology" />
+                                        <label for="terminologyCheck">مراجعة المصطلحات العلمية</label>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="languageStyle">أسلوب اللغة</label>
+                                        <select id="languageStyle" v-model="reviewOptions.languageStyle">
+                                            <option value="formal">رسمي أكاديمي</option>
+                                            <option value="semiFormal">شبه رسمي</option>
+                                            <option value="simple">مبسط</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div v-if="activeReviewTool === 'plagiarism'" class="plagiarism-options">
+                                    <div class="form-group">
+                                        <label for="checkType">نوع الفحص</label>
+                                        <select id="checkType" v-model="reviewOptions.checkType">
+                                            <option value="standard">قياسي</option>
+                                            <option value="deep">عميق</option>
+                                            <option value="ai">كشف محتوى الذكاء الاصطناعي</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="excludeSources">استبعاد المصادر</label>
+                                        <textarea id="excludeSources" v-model="reviewOptions.excludeSources" placeholder="أدخل روابط المصادر التي ترغب في استبعادها من الفحص"></textarea>
+                                    </div>
+                                </div>
+                                
+                                <div class="review-actions">
+                                    <button class="btn-primary" @click="startReview">بدء المراجعة</button>
+                                    <button class="btn-secondary">إعادة تعيين</button>
+                                </div>
+                            </div>
+                            
+                            <div v-if="reviewResults" class="review-results">
+                                <h4>نتائج المراجعة</h4>
+                                <div v-if="activeReviewTool === 'plagiarism'" class="plagiarism-results">
+                                    <div class="results-summary">
+                                        <div class="summary-chart">
+                                            <canvas id="plagiarismChart"></canvas>
+                                        </div>
+                                        <div class="summary-stats">
+                                            <div class="stat-card" :class="{ warning: reviewResults.similarity > 20 }">
+                                                <h5>نسبة التشابه</h5>
+                                                <div class="stat-value">{{ reviewResults.similarity }}%</div>
+                                            </div>
+                                            <div class="stat-card">
+                                                <h5>المصادر المكتشفة</h5>
+                                                <div class="stat-value">{{ reviewResults.sources }}</div>
+                                            </div>
+                                            <div class="stat-card">
+                                                <h5>اقتباسات صحيحة</h5>
+                                                <div class="stat-value">{{ reviewResults.citations }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="results-details">
+                                        <h5>تفاصيل الاقتباسات</h5>
+                                        <div v-for="match in reviewResults.matches" :key="match.id" class="match-item">
+                                            <div class="match-text">
+                                                <p>" {{ match.text }} "</p>
+                                            </div>
+                                            <div class="match-source">
+                                                <p><strong>المصدر:</strong> {{ match.source }}</p>
+                                                <p><strong>نسبة التطابق:</strong> {{ match.percentage }}%</p>
+                                            </div>
+                                            <div class="match-actions">
+                                                <button class="btn-small">استعراض المصدر</button>
+                                                <button class="btn-small">تجاهل</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="export-options">
+                                    <button class="btn-secondary">تصدير التقرير</button>
+                                    <button class="btn-secondary">طباعة</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- قسم المكتبة الرقمية -->
+            <section v-if="activeSection === 'library'" class="library">
+                <h2>المكتبة الرقمية المفتوحة</h2>
+                <div class="section-content">
+                    <div class="library-sidebar">
+                        <div class="search-box">
+                            <input type="text" placeholder="البحث في المكتبة..." v-model="librarySearch" />
+                            <button class="btn-search">بحث</button>
+                        </div>
+                        
+                        <div class="categories">
+                            <h3>التصنيفات</h3>
+                            <ul>
+                                <li v-for="category in libraryCategories" :key="category.id"
+                                    :class="{ active: selectedLibraryCategory === category.id }"
+                                    @click="selectedLibraryCategory = category.id">
+                                    <span class="category-icon" v-html="category.icon"></span>
+                                    <span>{{ category.name }}</span>
+                                    <span class="count">{{ category.count }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div class="resource-types">
+                            <h3>أنواع الموارد</h3>
+                            <div class="checkbox-list">
+                                <label v-for="type in resourceTypes" :key="type.id">
+                                    <input type="checkbox" v-model="selectedResourceTypes" :value="type.id" />
+                                    {{ type.name }}
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="access-filters">
+                            <h3>نوع الوصول</h3>
+                            <div class="radio-list">
+                                <label>
+                                    <input type="radio" v-model="accessFilter" value="all" />
+                                    الكل
+                                </label>
+                                <label>
+                                    <input type="radio" v-model="accessFilter" value="open" />
+                                    مفتوح المصدر
+                                </label>
+                                <label>
+                                    <input type="radio" v-model="accessFilter" value="restricted" />
+                                    وصول محدود
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="library-main">
+                        <div class="library-tabs">
+                            <button :class="{ active: libraryTab === 'resources' }" @click="libraryTab = 'resources'">المصادر العلمية</button>
+                            <button :class="{ active: libraryTab === 'templates' }" @click="libraryTab = 'templates'">القوالب الأكاديمية</button>
+                            <button :class="{ active: libraryTab === 'journals' }" @click="libraryTab = 'journals'">المجلات العلمية</button>
+                        </div>
+                        
+                        <div v-if="libraryTab === 'resources'" class="resources-grid">
+                            <div v-for="resource in filteredLibraryResources" :key="resource.id" class="resource-card">
+                                <div class="resource-type" :class="resource.type"></div>
+                                <div class="resource-content">
+                                    <h3>{{ resource.title }}</h3>
+                                    <p class="resource-authors">{{ resource.authors.join(', ') }}</p>
+                                    <p class="resource-details">
+                                        <span>{{ resource.publishedIn }}</span>
+                                        <span>{{ resource.year }}</span>
+                                    </p>
+                                    <p class="resource-description">{{ resource.description }}</p>
+                                    <div class="resource-tags">
+                                        <span v-for="tag in resource.tags" :key="tag" class="tag">{{ tag }}</span>
+                                    </div>
+                                </div>
+                                <div class="resource-actions">
+                                    <button class="btn-primary">تحميل</button>
+                                    <button class="btn-secondary">حفظ</button>
+                                    <button class="btn-icon">
+                                        <svg width="16" height="16" viewBox="0 0 16 16">
+                                            <circle cx="8" cy="8" r="1.5" fill="currentColor" />
+                                            <circle cx="8" cy="3" r="1.5" fill="currentColor" />
+                                            <circle cx="8" cy="13" r="1.5" fill="currentColor" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div v-if="libraryTab === 'templates'" class="templates-grid">
+                            <div v-for="template in academicTemplates" :key="template.id" class="template-card">
+                                <div class="template-preview">
+                                    <svg width="100" height="140" viewBox="0 0 100 140">
+                                        <rect x="10" y="10" width="80" height="120" fill="#f5f5f5" stroke="#ccc" />
+                                        <rect x="20" y="20" width="60" height="10" fill="#e0e0e0" />
+                                        <rect x="20" y="40" width="60" height="5" fill="#e0e0e0" />
+                                        <rect x="20" y="50" width="60" height="5" fill="#e0e0e0" />
+                                        <rect x="20" y="60" width="40" height="5" fill="#e0e0e0" />
+                                        <rect x="20" y="80" width="60" height="40" fill="#e0e0e0" />
+                                    </svg>
+                                </div>
+                                <div class="template-info">
+                                    <h3>{{ template.name }}</h3>
+                                    <p>{{ template.description }}</p>
+                                    <div class="template-meta">
+                                        <span class="template-format">{{ template.format }}</span>
+                                        <span class="template-standard">{{ template.standard }}</span>
+                                    </div>
+                                </div>
+                                <div class="template-actions">
+                                    <button class="btn-primary">تحميل</button>
+                                    <button class="btn-secondary">معاينة</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="pagination">
+                            <button>&laquo;</button>
+                            <button class="active">1</button>
+                            <button>2</button>
+                            <button>3</button>
+                            <button>&raquo;</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <svg width="40" height="40" viewBox="0 0 50 50">
+                        <circle cx="25" cy="25" r="20" fill="#4285f4" />
+                        <path d="M25 15v20M15 25h20" stroke="white" stroke-width="4" />
+                    </svg>
+                    <h2>منصة الباحثين العلمية</h2>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-section">
+                        <h3>روابط سريعة</h3>
+                        <ul>
+                            <li><a href="#">الصفحة الرئيسية</a></li>
+                            <li><a href="#">الخدمات</a></li>
+                            <li><a href="#">المكتبة الرقمية</a></li>
+                            <li><a href="#">المجتمع العلمي</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-section">
+                        <h3>الدعم</h3>
+                        <ul>
+                            <li><a href="#">تواصل معنا</a></li>
+                            <li><a href="#">الأسئلة الشائعة</a></li>
+                            <li><a href="#">تقديم طلب دعم</a></li>
+                            <li><a href="#">دليل الاستخدام</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-section">
+                        <h3>الموارد</h3>
+                        <ul>
+                            <li><a href="#">مدونة البحث العلمي</a></li>
+                            <li><a href="#">المؤتمرات القادمة</a></li>
+                            <li><a href="#">دورات تدريبية</a></li>
+                            <li><a href="#">فرص بحثية</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>جميع الحقوق محفوظة &copy; 2023 منصة الباحثين العلمية</p>
+                <div class="social-links">
+                    <a href="#" class="social-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24">
+                            <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" fill="currentColor" />
+                        </svg>
+                    </a>
+                    <a href="#" class="social-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24">
+                            <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" fill="currentColor" />
+                        </svg>
+                    </a>
+                    <a href="#" class="social-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24">
+                            <rect x="2" y="2" width="20" height="20" rx="5" fill="currentColor" />
+                            <circle cx="12" cy="12" r="4" fill="white" />
+                            <circle cx="18" cy="6" r="1.5" fill="white" />
+                        </svg>
+                    </a>
+                    <a href="#" class="social-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24">
+                            <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" fill="currentColor" />
+                            <circle cx="4" cy="4" r="2" fill="currentColor" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
